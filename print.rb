@@ -1,9 +1,45 @@
 #!/usr/bin/env ruby
+#
+# imagewriter
+#
+# writes a black and white PNG image onto a piece of paper,
+# using an Apple Imagewriter or ImageWriter II printer
+#
+# run `./imagewriter -h` to see options.
+#
+#  ,  2020 pete gamache pete@gamache.org
+# (k) all rights reversed
+
 require 'chunky_png'
 require 'optparse'
 
-
 class ImageWriter
+  def initialize(argv)
+    parse_argv!(argv.clone)
+
+    @img = ChunkyPNG::Image.from_file(@filename)
+    STDERR.puts "#{@filename}: height #{@img.height}, width #{@img.width}"
+
+    printable_width = @hdpi * 8
+    if @img.width > printable_width
+      STDERR.puts "Warning: image exceeds printable width of #{printable_width} pixels; printout will be clipped"
+    end
+  end
+
+  def print!
+    init_printer!
+
+    if @quality == "regular"
+      do_print!(16, 0, :b1_v144_regular, :b2_v144_regular, 1, 15)
+    elsif @quality == "enhanced"
+      do_print!(12, -4, :b1_v144_enhanced, :b2_v144_enhanced, 1, 11)
+    elsif @quality == "best"
+      do_print!(4, 0, :b1_v144_best, :b2_v144_best, 1, 3)
+    end
+  end
+
+@private
+
   ## Send Esc + this letter to change horizontal DPI
   HORIZ_DPI_CODE = {
     72 => "n",
@@ -15,8 +51,6 @@ class ImageWriter
     144 => "p",
     160 => "P"
   }
-
-  QUALITY = ["regular", "enhanced", "best"]
 
   ## Send \x1F then this letter to send N line feeds
   LINE_FEEDS = {
@@ -37,50 +71,49 @@ class ImageWriter
     15 => "?"
   }
 
+  QUALITY = ["regular", "enhanced", "best"]
+
   def parse_argv!(argv)
     options = {
       hdpi: 144,
-      vdpi: 144,
       quality: "regular",
+      sleep: 0.75
     }
 
     help = nil
     OptionParser.new do |parser|
-      parser.banner = "Usage: #{$0} [options] filename.png"
+      parser.banner = <<-EOT
+        Usage: #{$0} [options] filename.png"
+        Vertical resolution is 144 dpi; horizontal resolution is adjustable.
+        EOT
 
       dpis = HORIZ_DPI_CODE.keys.join(", ")
       parser.on('-H', '--horizontal DPI', Integer, "Horizontal DPI (one of: #{dpis}; default #{options[:hdpi]})") do |n|
         if HORIZ_DPI_CODE[n]
           options[:hdpi] = n
         else
-          STDERR.puts "Bad horizontal DPI setting #{n} (must be one of: #{dpis})"
-          STDERR.puts(parser.to_s)
+          STDERR.puts "Bad horizontal DPI setting #{n} (must be one of: #{dpis})\n"
+          STDERR.puts parser.to_s
           exit 1
         end
       end
 
-      parser.on("-V", "--vertical DPI", Integer, "Vertical DPI (one of: 72, 144; default #{options[:vdpi]})") do |n|
-        if n == 72 || n == 144
-          options[:vdpi] = n
-        else
-          STDERR.puts "Bad vertical DPI setting #{n} (must be one of : 72, 144)"
-          STDERR.puts(parser.to_s)
-          exit 1
-        end
-      end
-
-      parser.on("-q", "--quality QUALITY", "Print quality (ignored at 72 vertical DPI; one of: #{QUALITY.join(", ")}; default #{options[:quality]})") do |n|
+      parser.on("-q", "--quality QUALITY", "Print quality (one of: #{QUALITY.join(", ")}; default #{options[:quality]})") do |n|
         if QUALITY.include?(n)
           options[:quality] = n
         else
-          STDERR.puts "Bad quality setting #{n} (must be one of: #{QUALITY.join(", ")})"
-          STDERR.puts(parser.to_s)
+          STDERR.puts "Bad quality setting #{n} (must be one of: #{QUALITY.join(", ")})\n"
+          STDERR.puts parser
           exit 1
         end
       end
 
-      parser.on("-h", "--help", "Display this help message") do
-        STDERR.puts(parser.to_s)
+      parser.on("-s", "--sleep", Float, "Sleep this many seconds between passes (default #{options[:sleep]})") do |n|
+        options[:sleep] = n
+      end
+
+      parser.on("-h", "--help", "Print this help message to STDERR") do
+        STDERR.puts parser
         exit
       end
 
@@ -88,62 +121,18 @@ class ImageWriter
     end.parse!(argv)
 
     @hdpi = options[:hdpi]
-    @vdpi = options[:vdpi]
     @quality = options[:quality]
-    @filename = argv.shift
+    @sleep = options[:sleep]
 
+    @filename = argv.shift
     if !@filename
-      STDERR.puts "Missing filename"
+      STDERR.puts "Missing filename\n"
       STDERR.puts help
       exit 1
     end
   end
 
-  def initialize(argv)
-    parse_argv!(argv.clone)
-
-    @img = ChunkyPNG::Image.from_file(@filename)
-    STDERR.puts "#{@filename}: height #{@img.height}, width #{@img.width}"
-
-    printable_width = @hdpi * 8
-    if @img.width > printable_width
-      STDERR.puts "Warning: image exceeds printable width of #{printable_width} pixels"
-    end
-
-    init_printer
-
-    if @vdpi == 72
-      print_v72
-    elsif @quality == "regular"
-      print_v144(16, 0, :b1_v144_regular, :b2_v144_regular, 1, 15, 0.75)
-    elsif @quality == "enhanced"
-      print_v144(12, -4, :b1_v144_enhanced, :b2_v144_enhanced, 1, 11, 0.75)
-    elsif @quality == "best"
-      print_v144(4, 0, :b1_v144_best, :b2_v144_best, 1, 3, 0.75)
-    end
-  end
-
-  def print_v72
-    passes = (@img.height / 8).ceil
-    y = 0
-    width = [@hdpi * 8, @img.width].min
-
-    0.upto(passes) do
-      bytes = 0.upto(width).map{|x| b1_v72(x, y)}
-
-      printf "\r"
-      printf "\eG%.4d", width
-      bytes.each{|b| print b.chr}
-
-      printf "\x1F8\x1F8"
-
-      sleep 0.75
-
-      y += 8
-    end
-  end
-
-  def print_v144(lines_per_double_pass, y0, b1_fun, b2_fun, lf1, lf2, naptime)
+  def do_print!(lines_per_double_pass, y0, b1_fun, b2_fun, lf1, lf2)
     double_passes = (@img.height / lines_per_double_pass).ceil + 1
     y = y0
     width = [@hdpi * 8, @img.width].min
@@ -164,13 +153,12 @@ class ImageWriter
 
       printf "\x1F%s", LINE_FEEDS[lf2]
 
-      sleep naptime
+      sleep @sleep
       y += lines_per_double_pass
     end
   end
 
-
-  #### Regular quality: 16 lines per double-pass
+  ### Regular quality: 16 lines per double-pass
   def b1_v144_regular(x, y)
     0 +
       0b00000001 * get(x, y) +
@@ -195,7 +183,7 @@ class ImageWriter
       0b10000000 * get(x, y+15)
   end
 
-  #### Enhanced quality: 12 lines per double-pass, interleaved by 4 dots
+  ### Enhanced quality: 12 lines per double-pass, 4 dots dovetailed
   def b1_v144_enhanced(x, y)
     0 +
       0b00000001 * get(x, y) +
@@ -203,7 +191,7 @@ class ImageWriter
       0b00000100 * get(x, y+4) +
       0b00001000 * get(x, y+6) +
       0b00010000 * get(x, y+8) +
-      0b00100000 * get(x, y+10) #+
+      0b00100000 * get(x, y+10)
       #0b01000000 * get(x, y+12) +
       #0b10000000 * get(x, y+14)
   end
@@ -220,7 +208,7 @@ class ImageWriter
       0b10000000 * get(x, y+15)
   end
 
-  #### Best quality: 4 lines per double-pass
+  ### Best quality: 4 lines per double-pass
   def b1_v144_best(x, y)
     0 +
       0b00000001 * get(x, y) +
@@ -233,19 +221,6 @@ class ImageWriter
       0b00000010 * get(x, y+3)
   end
 
-  #### 72 dpi
-  def b1_v72(x, y)
-    0 +
-      0b00000001 * get(x, y) +
-      0b00000010 * get(x, y+1) +
-      0b00000100 * get(x, y+2) +
-      0b00001000 * get(x, y+3) +
-      0b00010000 * get(x, y+4) +
-      0b00100000 * get(x, y+5) +
-      0b01000000 * get(x, y+6) +
-      0b10000000 * get(x, y+7)
-  end
-
   ## Returns 0 for black pixels that exist, 1 otherwise
   def get(x, y)
     x = @img[x, y] & 0xffffff00
@@ -255,7 +230,7 @@ class ImageWriter
     1
   end
 
-  def init_printer
+  def init_printer!
     printf "\ef" # forward line feeds
     printf "\e\x6C1" # do not insert carriage return before LF and FF
     printf "\eZ\x80\x00" # no line feed added after CR
@@ -264,4 +239,4 @@ class ImageWriter
   end
 end
 
-ImageWriter.new(ARGV)
+ImageWriter.new(ARGV).print!
