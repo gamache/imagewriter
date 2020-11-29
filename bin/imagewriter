@@ -83,9 +83,11 @@ class ImageWriter
     help = nil
     OptionParser.new do |parser|
       parser.banner = <<-EOT
-        Usage: #{$0} [options] filename.png"
-        Vertical resolution is 144 dpi; horizontal resolution is adjustable.
-        EOT
+Usage: imagewriter [options] filename.png"
+Vertical resolution is 144 dpi; horizontal resolution is adjustable.
+Max printable width is 8 inches, or 8 * horizontal DPI pixels.
+Options:
+      EOT
 
       dpis = HORIZ_DPI_CODE.keys.join(", ")
       parser.on('-H', '--horizontal DPI', Integer, "Horizontal DPI (one of: #{dpis}; default #{options[:hdpi]})") do |n|
