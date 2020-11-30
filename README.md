@@ -1,6 +1,7 @@
 # imagewriter
 
-Print PNG images to an Apple Imagewriter or ImageWriter II
+Print black-and-white PNG images to an Apple Imagewriter or ImageWriter II
+dot-matrix serial printer.
 
 Written in Ruby.
 
@@ -13,7 +14,10 @@ Written in Ruby.
 
 ## Installing
 
-`gem install imagewriter`
+To install systemwide, use `gem install imagewriter`.
+
+To use from the project directory, run `bundle install` once, then
+run `bin/imagewriter` directly.
 
 ## Usage
 
@@ -21,25 +25,21 @@ Output is written to STDOUT, and should be redirected to the serial
 adapter of your choice.
 
 ```
-Usage: imagewriter [options] filename.png"
+Usage: imagewriter [options] filename.png
 Vertical resolution is 144 dpi; horizontal resolution is adjustable.
 Max printable width is 8 inches, or 8 * horizontal DPI pixels.
 Options:
-    -H, --horizontal DPI             Horizontal DPI (one of: 72, 80, 96, 107, 120, 136, 144, 160; default 144)
-    -q, --quality QUALITY            Print quality (one of: regular, enhanced, best; default regular)
-    -s, --sleep                      Sleep this many seconds between passes (default 0.75)
+    -H, --horizontal DPI             Horizontal DPI. One of: 72, 80, 96, 107, 120, 136, 144, 160; default 144
+    -q, --quality QUALITY            Print quality. 1 (fastest) to 8 (best); default 1
+    -s, --sleep                      Sleep this many seconds between passes. Default 0.75
     -h, --help                       Print this help message to STDERR
 ```
 
 ## Status
 
-`regular` works fine but leaves the characteristic horizontal streaks
-you remember from childhood.
+Works great 👍
 
-`enhanced` looks much nicer than and is almost as fast as `regular`.
-Currently there's a garbage `?` at the end of each pass (PRs welcome!).
-
-`best` looks fantastic but takes forever.
+High quality settings take a very long time, but produce lovely output.
 
 ## Why
 

@@ -26,15 +26,43 @@ class ImageWriter
     end
   end
 
+  ## Prints an image at double vertical resolution (144 dpi) by
+  ## writing interleaved rows in a back-and-forth "double pass".
   def print!
     init_printer!
 
-    if @quality == "regular"
-      do_print!(16, 0, :b1_v144_regular, :b2_v144_regular, 1, 15)
-    elsif @quality == "enhanced"
-      do_print!(12, -4, :b1_v144_enhanced, :b2_v144_enhanced, 1, 11)
-    elsif @quality == "best"
-      do_print!(4, 0, :b1_v144_best, :b2_v144_best, 1, 3)
+    ## Higher quality is achieved by printing fewer lines at a time,
+    ## and dovetailing these lines with the adjacent double-passes
+    dovetail = 2 * (@quality-1)
+    lines_per_double_pass = 16 - dovetail
+
+    ## Make bitmasks for first- and second-pass bytes
+    half_dovetail = (dovetail / 2).to_i
+    dovemask1 = 0xff >> half_dovetail
+    dovemask2 = 0xff << half_dovetail
+
+    width = [@hdpi * 8, @img.width].min
+
+    y = -16 # start here to provide any necessary margin for dovetailing
+
+    while (y <= @img.height) do
+      bytes1 = 0.upto(width).map{|x| b1(x, y) & dovemask1}
+      bytes2 = 0.upto(width).map{|x| b2(x, y) & dovemask2}
+
+      printf "\eG%.4d", bytes1.length
+      bytes1.each{|b| print b.chr}
+      printf "\r"
+
+      printf "\x1F1" # one line feed
+
+      printf "\eG%.4d", bytes2.length
+      bytes2.each{|b| print b.chr}
+      printf "\r"
+
+      printf "\x1F%s", LINE_FEEDS[lines_per_double_pass - 1]
+
+      sleep @sleep
+      y += lines_per_double_pass
     end
   end
 
@@ -71,26 +99,24 @@ class ImageWriter
     15 => "?"
   }
 
-  QUALITY = ["regular", "enhanced", "best"]
-
   def parse_argv!(argv)
     options = {
       hdpi: 144,
-      quality: "regular",
+      quality: 1,
       sleep: 0.75
     }
 
     help = nil
     OptionParser.new do |parser|
       parser.banner = <<-EOT
-Usage: imagewriter [options] filename.png"
+Usage: imagewriter [options] filename.png
 Vertical resolution is 144 dpi; horizontal resolution is adjustable.
 Max printable width is 8 inches, or 8 * horizontal DPI pixels.
 Options:
       EOT
 
       dpis = HORIZ_DPI_CODE.keys.join(", ")
-      parser.on('-H', '--horizontal DPI', Integer, "Horizontal DPI (one of: #{dpis}; default #{options[:hdpi]})") do |n|
+      parser.on('-H', '--horizontal DPI', Integer, "Horizontal DPI. One of: #{dpis}; default #{options[:hdpi]}") do |n|
         if HORIZ_DPI_CODE[n]
           options[:hdpi] = n
         else
@@ -100,17 +126,17 @@ Options:
         end
       end
 
-      parser.on("-q", "--quality QUALITY", "Print quality (one of: #{QUALITY.join(", ")}; default #{options[:quality]})") do |n|
-        if QUALITY.include?(n)
+      parser.on("-q", "--quality QUALITY", Integer, "Print quality. 1 (fastest) to 8 (best); default #{options[:quality]}") do |n|
+        if n > 0 && n < 9
           options[:quality] = n
         else
-          STDERR.puts "Bad quality setting #{n} (must be one of: #{QUALITY.join(", ")})\n"
+          STDERR.puts "Bad quality setting #{n} (must be 1-8)"
           STDERR.puts parser
           exit 1
         end
       end
 
-      parser.on("-s", "--sleep", Float, "Sleep this many seconds between passes (default #{options[:sleep]})") do |n|
+      parser.on("-s", "--sleep", Float, "Sleep this many seconds between passes. Default #{options[:sleep]}") do |n|
         options[:sleep] = n
       end
 
@@ -134,34 +160,8 @@ Options:
     end
   end
 
-  def do_print!(lines_per_double_pass, y0, b1_fun, b2_fun, lf1, lf2)
-    double_passes = (@img.height / lines_per_double_pass).ceil + 1
-    y = y0
-    width = [@hdpi * 8, @img.width].min
-
-    0.upto(double_passes) do
-      bytes1 = 0.upto(width).map{|x| self.send(b1_fun, x, y)}
-      bytes2 = 0.upto(width).map{|x| self.send(b2_fun, x, y)}
-
-      printf "\eG%.4d", width
-      bytes1.each{|b| print b.chr}
-      printf "\r"
-
-      printf "\x1F%s", LINE_FEEDS[lf1]
-
-      printf "\eG%.4d", width
-      bytes2.each{|b| print b.chr}
-      printf "\r"
-
-      printf "\x1F%s", LINE_FEEDS[lf2]
-
-      sleep @sleep
-      y += lines_per_double_pass
-    end
-  end
-
-  ### Regular quality: 16 lines per double-pass
-  def b1_v144_regular(x, y)
+  ## Returns data byte for first-pass lines
+  def b1(x, y)
     0 +
       0b00000001 * get(x, y) +
       0b00000010 * get(x, y+2) +
@@ -173,7 +173,8 @@ Options:
       0b10000000 * get(x, y+14)
   end
 
-  def b2_v144_regular(x, y)
+  ## Returns data byte for second-pass lines
+  def b2(x, y)
     0 +
       0b00000001 * get(x, y+1) +
       0b00000010 * get(x, y+3) +
@@ -185,47 +186,9 @@ Options:
       0b10000000 * get(x, y+15)
   end
 
-  ### Enhanced quality: 12 lines per double-pass, 4 dots dovetailed
-  def b1_v144_enhanced(x, y)
-    0 +
-      0b00000001 * get(x, y) +
-      0b00000010 * get(x, y+2) +
-      0b00000100 * get(x, y+4) +
-      0b00001000 * get(x, y+6) +
-      0b00010000 * get(x, y+8) +
-      0b00100000 * get(x, y+10)
-      #0b01000000 * get(x, y+12) +
-      #0b10000000 * get(x, y+14)
-  end
-
-  def b2_v144_enhanced(x, y)
-    0 +
-      #0b00000001 * get(x, y+1) +
-      #0b00000010 * get(x, y+3) +
-      0b00000100 * get(x, y+5) +
-      0b00001000 * get(x, y+7) +
-      0b00010000 * get(x, y+9) +
-      0b00100000 * get(x, y+11) +
-      0b01000000 * get(x, y+13) +
-      0b10000000 * get(x, y+15)
-  end
-
-  ### Best quality: 4 lines per double-pass
-  def b1_v144_best(x, y)
-    0 +
-      0b00000001 * get(x, y) +
-      0b00000010 * get(x, y+2)
-  end
-
-  def b2_v144_best(x, y)
-    0 +
-      0b00000001 * get(x, y+1) +
-      0b00000010 * get(x, y+3)
-  end
-
   ## Returns 0 for black pixels that exist, 1 otherwise
   def get(x, y)
-    x = @img[x, y] & 0xffffff00
+    x = @img[x, y] & 0xffffff00 # strip alpha channel
     return 0 if x > 0
     1
   rescue
