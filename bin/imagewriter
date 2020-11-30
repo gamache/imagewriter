@@ -136,7 +136,7 @@ Options:
         end
       end
 
-      parser.on("-s", "--sleep", Float, "Sleep this many seconds between passes. Default #{options[:sleep]}") do |n|
+      parser.on("-s", "--sleep SECONDS", Float, "Sleep this many seconds between passes. Default #{options[:sleep]}") do |n|
         options[:sleep] = n
       end
 

@@ -48,6 +48,17 @@ CUPS ImageWriter driver provides. The [technical manual for the
 ImageWriter II](https://www.apple.asimov.net/documentation/hardware/printers/Apple%20ImageWriter%20II%20Technical%20Reference%20Manual.pdf)
 is not hard to come by, so I used it to write this.
 
+## How
+
+It uses the standard interleaved-rows trick to achieve 144 vertical DPI.
+Writing 16 rows on each back-and-forth pass is the default and fastest
+setting, and matches the operation of extant ImageWriter drivers.
+Unsightly horizontal lines are commonly present in the output.
+
+Higher output quality is achieved by writing fewer rows at a time,
+and dovetailing the vertical edges of each pass in order to soften the
+horizontal artifacts in the finished printout.
+
 ## Who, When
 
 Written by Pete Gamache over Thanksgiving weekend, 2020.
