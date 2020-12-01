@@ -72,15 +72,15 @@ then a quality 1 (fastest) rendering taking 6 minutes,
 then a quality 7 (best) rendering taking 23 minutes.
 
 <a href=images/lenna-bw-144.png>
-<img src="images/lenna-bw-144.png" width=240 alt="original b&w image">
+<img src="images/lenna-bw-144.png" width=240 alt="b&w source image">
 </a>
 
 <a href=images/lenna-quality-1.png>
-<img src="images/lenna-quality-1.png" width=240 alt="quality 1 (fastest, 6 minutes)">
+<img src="images/lenna-quality-1.png" width=240 alt="quality 1 printout (fastest, 6 minutes)">
 </a>
 
 <a href=images/lenna-quality-7.png>
-<img src="images/lenna-quality-7.png" width=240 alt="quality 7 (best, 23 minutes)">
+<img src="images/lenna-quality-7.png" width=240 alt="quality 7 printout (best, 23 minutes)">
 </a>
 
 ## Who, When
