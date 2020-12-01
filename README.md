@@ -66,20 +66,21 @@ The default time of 0.75 seconds works well on an ImageWriter II.
 ## What
 
 Here, some examples should help. As is traditional, I have used Lenna
-as an example image (photo by Anne Huix for Wired Magazine.) First the
-original image cropped to 8"x10.5", then a quality 1 (fastest) rendering
-taking 6 minutes, then a quality 7 (best) rendering taking 23 minutes.
+as an example image (photo by Anna Huix for Wired Magazine). First the
+original image cast in black and white and cropped to 8"x10.5",
+then a quality 1 (fastest) rendering taking 6 minutes,
+then a quality 7 (best) rendering taking 23 minutes.
 
-<a href=images/lenna-color-144.png>
-<img src="images/lenna-color-144.png" width=240>
+<a href=images/lenna-bw-144.png>
+<img src="images/lenna-bw-144.png" width=240 alt="original b&w image">
 </a>
 
 <a href=images/lenna-quality-1.png>
-<img src="images/lenna-quality-1.png" width=240>
+<img src="images/lenna-quality-1.png" width=240 alt="quality 1 (fastest, 6 minutes)">
 </a>
 
 <a href=images/lenna-quality-7.png>
-<img src="images/lenna-quality-7.png" width=240>
+<img src="images/lenna-quality-7.png" width=240 alt="quality 7 (best, 23 minutes)">
 </a>
 
 ## Who, When
