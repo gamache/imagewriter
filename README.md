@@ -71,15 +71,15 @@ original image cropped to 8"x10.5", then a quality 1 (fastest) rendering
 taking 6 minutes, then a quality 7 (best) rendering taking 23 minutes.
 
 <a href=images/lenna-color-144.png>
-<img src="images/lenna-color-144.png" width=320>
+<img src="images/lenna-color-144.png" width=240>
 </a>
 
 <a href=images/lenna-quality-1.png>
-<img src="images/lenna-quality-1.png" width=320>
+<img src="images/lenna-quality-1.png" width=240>
 </a>
 
 <a href=images/lenna-quality-7.png>
-<img src="images/lenna-quality-7.png" width=320>
+<img src="images/lenna-quality-7.png" width=240>
 </a>
 
 ## Who, When
