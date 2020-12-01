@@ -30,16 +30,16 @@ Vertical resolution is 144 dpi; horizontal resolution is adjustable.
 Max printable width is 8 inches, or 8 * horizontal DPI pixels.
 Options:
     -H, --horizontal DPI             Horizontal DPI. One of: 72, 80, 96, 107, 120, 136, 144, 160; default 144
-    -q, --quality QUALITY            Print quality. 1 (fastest) to 8 (best); default 1
-    -s, --sleep                      Sleep this many seconds between passes. Default 0.75
+    -q, --quality QUALITY            Print quality. 1 (fastest) to 7 (best); default 1
+    -s, --sleep SECONDS              Sleep this many seconds between passes. Default 0.75
     -h, --help                       Print this help message to STDERR
 ```
 
-## Status
+Example:
 
-Works great 👍
-
-High quality settings take a very long time, but produce lovely output.
+```
+imagewriter -q 5 foo.png > /dev/ttyUSB0
+```
 
 ## Why
 
@@ -58,6 +58,10 @@ Unsightly horizontal lines are commonly present in the output.
 Higher output quality is achieved by writing fewer rows at a time,
 and dovetailing the vertical edges of each pass in order to soften the
 horizontal artifacts in the finished printout.
+
+Flow control is not always easy to come by, so the output loop has a
+delay time in order to prevent buffer overruns (and garbage printouts).
+The default time of 0.75 seconds works well on an ImageWriter II.
 
 ## Who, When
 

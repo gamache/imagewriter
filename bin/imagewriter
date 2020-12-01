@@ -46,18 +46,18 @@ class ImageWriter
     y = -16 # start here to provide any necessary margin for dovetailing
 
     while (y <= @img.height) do
-      bytes1 = 0.upto(width).map{|x| b1(x, y) & dovemask1}
-      bytes2 = 0.upto(width).map{|x| b2(x, y) & dovemask2}
+      bytes1 = 0.upto(width-1).map{|x| b1(x, y) & dovemask1}
+      bytes2 = 0.upto(width-1).map{|x| b2(x, y) & dovemask2}
 
       printf "\eG%.4d", bytes1.length
       bytes1.each{|b| print b.chr}
-      printf "\r"
+      print "\r"
 
-      printf "\x1F1" # one line feed
+      print "\x1F1" # one line feed
 
       printf "\eG%.4d", bytes2.length
       bytes2.each{|b| print b.chr}
-      printf "\r"
+      print "\r"
 
       printf "\x1F%s", LINE_FEEDS[lines_per_double_pass - 1]
 
@@ -126,11 +126,11 @@ Options:
         end
       end
 
-      parser.on("-q", "--quality QUALITY", Integer, "Print quality. 1 (fastest) to 8 (best); default #{options[:quality]}") do |n|
-        if n > 0 && n < 9
+      parser.on("-q", "--quality QUALITY", Integer, "Print quality. 1 (fastest) to 7 (best); default #{options[:quality]}") do |n|
+        if n > 0 && n < 8
           options[:quality] = n
         else
-          STDERR.puts "Bad quality setting #{n} (must be 1-8)"
+          STDERR.puts "Bad quality setting #{n} (must be 1-7)"
           STDERR.puts parser
           exit 1
         end
@@ -186,20 +186,17 @@ Options:
       0b10000000 * get(x, y+15)
   end
 
-  ## Returns 0 for black pixels that exist, 1 otherwise
+  ## Returns 1 for black pixels that exist, 0 otherwise
   def get(x, y)
     x = @img[x, y] & 0xffffff00 # strip alpha channel
     return 0 if x > 0
     1
   rescue
-    1
+    0
   end
 
   def init_printer!
-    printf "\ef" # forward line feeds
-    printf "\e\x6C1" # do not insert carriage return before LF and FF
-    printf "\eZ\x80\x00" # no line feed added after CR
-    printf "\eT01" # set line feed to 1/144 inch
+    print "\eT01" # set line feed to 1/144 inch
     printf "\e%s", HORIZ_DPI_CODE[@hdpi]
   end
 end
